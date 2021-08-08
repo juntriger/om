@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    {{ pasted_data }}
+<div class="row my-3">
+    <!-- 검색 상자 Start -->
+    <div class="row px-4 mx-2" style="width:340px;">
+        <div class="col-8 my-3">
+            <select class="form-select form-select-sm so" aria-label=".form-select-sm example" style="width: 90%">
+                <option value="recent" selected>Recent</option>
+                <option value="popular">Popular</option>
+            </select>
+        </div>
+        <form class="row my-1" style="background: whitesmoke; font-size:13px;">
+            <!-- daterangepicker jquery 로 교체 예정 -->
+            <div class="col-7">
+                <label class="col-12 my-2"><b>Date</b></label>
+                <input type="date" class="form-control" style="width: 105%">
+            </div>
+            <div class="col-5">
+                <label class="col-12 my-2"><b>Brand</b></label>
+                <select class="form-select" style="width: 100%; height: 50%;">
+                    <option selected>Any</option>
+                    <option>ADI</option>
+                    <option>NIK</option>
+                    <option>NEW</option>
+                    <option>PUM</option>
+                    <option>LAC</option>
+                    <option>SAL</option>
+                    <option>ASI</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label class="col-12 my-2"><b>Customer</b></label>
+                <select class="form-select customer_kw" id="customer_kw">
+                    <option selected>Any</option>
+                    {% for customer in customer_list %}
+                    <option>{{ customer.customer }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-8 my-2">
+                <label class="col-md-8 my-2"><b>Order Id</b></label>
+                <input type="text" class="form-control order_id_kw" id="order_id_kw">
+            </div>
+            <div class="col-md-4 my-2">
+                <label class="col-md-4 my-2"><b>Seq#</b></label>
+                <input type="number" class="form-control seqnum_kw" id="seq_num_kw">
+            </div>
+            <div class="col-12">
+                <label class="col-12 my-2"><b>PO Code</b></label>
+                <input type="text" class="form-control" id="po_code_kw">
+            </div>
+            <div class="col-12">
+                <label class="col-12 my-2"><b>Item</b></label>
+                <input type="text" class="form-control" id="item_kw">
+            </div>
+            <div class="col-6">
+                <label class="col-12 my-2"><b>Color Code</b></label>
+                <input type="text" class="form-control" id="color_code_kw">
+            </div>
+            <div class="col-6">
+                <label class="col-12 my-2"><b>Pattern</b></label>
+                <input type="text" class="form-control" id="pattern_kw">
+            </div>
+            <div class="col-4">
+                <label class="col-12 my-2"><b>Q'ty</b></label>
+                <input type="number" class="form-control" id="order_qty_kw">
+            </div>
+            <div class="col-8"></div>
+            <div class="form-check form-switch my-3">
+                <input class="form-check-input watchlist" type="checkbox" id="watchlist" value="watchlist">
+                <label class="form-check-label" for="watchlist">Watch list</label>
+            </div>
+            <div class="col-6 my-3">
+                <button class="col-12 btn btn-outline-secondary" type="button" id="btn_search">Search</button>
+            </div>
+            <div class="col-6 my-3">
+                <button class="col-12 btn btn-outline-secondary" type="button" id="btn_paste"
+                        onclick="popup_excel_paste()">Paste</button>
+            </div>
+        </form>
+        <div class="row-4 my-5 excel_download">
+            <img src="/static/icon/excel.png" alt="excel_download">
+            <label><a href="{% url 'opman:export_order_xlsx' %}">OrderProcess.xlsx</a></label>
+        </div>
+        <form id="send_form" method="get" action="{% url 'opman:search_order_by_str' %}">
+            <input id="send_pasted_data" hidden name="pasted_data">
+            <input type="submit" hidden value="Search">
+        </form>
+    </div>
+    <!-- 검색 상자 End -->
+    <!-- 오더 테이블 Start -->
+    <div id="view-table" class="view-table" style="position:absolute; width:1600px; left:300px">
+        {% include "opman/order_table.html" %}
+    </div>
+    <!-- 오더 테이블 End -->
+</div>
+{% endblock %}
+{% block script %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.2/jquery.contextMenu.min.css">
+<script src="{% static 'jquery.contextMenu.min.js' %}"></script>
+<script src="{% static 'jquey.ui.position.js'%}"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    // 오더 문자열을 붙여넣기로 얻었을 경우
+    if(localStorage.getItem('pasted_data')){
+        var lastData = localStorage.getItem('pasted_data');
+        var inputF = document.getElementById("send_pasted_data");
+        inputF.value = lastData;
+
+        var lastData = document.getElementById("send_pasted_data").value;
+        $.ajax({
+            type:"GET",
+            url: 'searchbystr/',
+            data: {'order_arr': lastData},
+            success: function (data) {
+                $('#view-table').html(data)
+                inputF.value = '';
+            }
+        });
+        localStorage.setItem('pasted_data', '');
+    } else {
+        // 오더 테이블 영역에 user 정보 전달
+        $.ajax({
+            url: 'order/process/',
+            data: {'user_id': {{ user.id }}},
+            success: function (data) {
+                $('#view-table').html(data)
+            }
+        });
+    }
+
+    // 정렬 방식 변경
+    $(".so").on('change', function() {
+        $("#so").val($(this).val());
+        $("#page").val(1);
+        $("#searchForm").submit();
+    });
+
+    // 오더 키워드 검색
+    $("#btn_search").click(function(){
+        var order_id_kw = $('#order_id_kw').val();
+        var seq_num_kw = $('#seq_num_kw').val();
+        var po_code_kw = $('#po_code_kw').val();
+        var customer_kw = $('#customer_kw').val();
+        var item_kw = $('#item_kw').val();
+        var color_code_kw = $('#color_code_kw').val();
+        var pattern_kw = $('#pattern_kw').val();
+        var order_qty_kw = $('#order_qty_kw').val();
+
+        $.ajax({
+            url: 'search/',
+            data: {
+                'order_id_kw':order_id_kw,
+                'seq_num_kw':seq_num_kw,
+                'po_code_kw':po_code_kw,
+                'customer_kw':customer_kw,
+                'item_kw':item_kw,
+                'color_code_kw':color_code_kw,
+                'pattern_kw':pattern_kw,
+                'order_qty_kw':order_qty_kw
+            },
+
+            success: function (data) {
+                $('#view-table').html(data)
+            }
+        })
+    });
+
+    // 관심 목록 스위치 On
+    $("#watchlist").click(function(){
+        if($(this).is(':checked')){
+            $.ajax({
+                url: 'watchlist/',
+                data: {'user_id': {{ user.id }}},
+                success: function (data) {
+                    $('#view-table').html(data)
+                }
+            })
+        } else {
+            $.ajax({
+                url: '',
+                success: function () {
+                    location.reload();
+                }
+            })
+        }
+    });
+});
+
+// 오더 문자열 붙여넣기 팝업창 호출
+function popup_excel_paste(){
+    var url = "excel_paste.html";
+    var name = "excel_paste";
+    var option = "width = 450, height = 700, top = 150, left = 100, location = no"
+    window.open(url, name, option);
+}
+
+</script>
+{% endblock %}

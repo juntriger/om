@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EXCEL_PASTE_TOOL</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'bootstrap.min.css' %}">
+    <!-- opman CSS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+    <style>
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body style="background-color:whitesmoke">
+<nav class="navbar navbar-expand-lg navbar-light border-bottom" style="background-color: #2E4053">
+    <a class="navbar-brand mx-3" style="color: navajowhite">PLEASE PASTE HERE YOUR EXCEL DATA <br>FOR SEARCHING ORDERS!</a>
+</nav>
+<div class="row mx-0">
+    <div class="col-6 my-3">
+        <label><h5>PASTE HERE!</h5></label>
+        <textarea id="excel_paste_area" style="height: 400px; width: 200px;" onchange="excel_paste()"></textarea>
+        <form id="send_form">
+            {% csrf_token %}
+            <input id="send_pasted_data" type="hidden" name="pasted_data">
+            <input type="submit" value="Search" onclick="call()">
+        </form>
+    </div>
+    <div id="view-table" class="col-6 view-table my-3" style="width:200px; left:10px">
+        <table class="table-order-list table table-bordered table-sm table-responsive">
+            <thead>
+                <tr>
+                    <th style="display: none">id</th>
+                    <th style="width: 150px">Order Id</th>
+                    <th style="width: 50px">Seq#</th>
+                </tr>
+            </thead>
+            <tbody id="order_list_converted" class="order_list_converted" style="background-color: whitesmoke; font-size:15px;">
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+<script>
+
+// 엑셀 붙여넣기 기능 구현
+function excel_paste(){
+
+    document.getElementById('order_list_converted').innerHTML = "";
+
+    var order_arr = document.getElementById("excel_paste_area").value.split('\n');
+    var id_arr = Array;
+    var seq_arr = Array;
+    var pasted_data_str = ''
+
+    var tbdy = document.getElementById('order_list_converted');
+    for (var i = 0; i < order_arr.length; i++){
+        if (order_arr[i].length > 0){
+            id_arr = order_arr[i].split('	')[0];   // Order Id 배열
+            seq_arr = order_arr[i].split('	')[1];   // Seq# 배열
+
+            var tr = document.createElement('tr');
+
+            var td_id = document.createElement('td');
+            td_id.appendChild(document.createTextNode(id_arr));
+            tr.appendChild(td_id);
+
+            var td_seq = document.createElement('td');
+            td_seq.appendChild(document.createTextNode(seq_arr));
+            tr.appendChild(td_seq);
+
+            tbdy.appendChild(tr);
+
+            pasted_data_str = pasted_data_str + id_arr + "-" + seq_arr + "&"
+        }
+    }
+    var inputF = document.getElementById("send_pasted_data");
+    inputF.value = pasted_data_str.slice(0, -1)
+}
+
+// 데이터 전달 및 팝업 창 종료
+function call(){
+    var pasted_data = document.getElementById("send_pasted_data").value;
+    localStorage.setItem('pasted_data', pasted_data);
+    opener.location.reload();
+    window.close();
+}
+</script>
+</html>

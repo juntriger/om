@@ -1,0 +1,195 @@
+{% load static %}
+{% if order_list %}
+<table id="table-order-list" class="table-order-list table table-bordered table-sm table-responsive" style="text-align: center;">
+    <thead>
+        <tr style="font-size:0.8vw;">
+            <th style="display: none">id</th>
+            <th style="width: 120px">Order Id</th>
+            <th style="width: 60px">Seq#</th>
+            <th style="width: 150px">PO Code</th>
+            <th style="width: 150px">Customer</th>
+            <th style="width: 60px">Type</th>
+            <th>Date</th>
+            <th>RTD</th>
+            <th>ETD</th>
+            <th style="width: 80px">Brand</th>
+            <th style="width: 120px">Item</th>
+            <th style="width: 120px">Color</th>
+            <th style="width: 150px">Pattern</th>
+            <th style="width: 60px">Q'ty</th>
+            <th style="width: 60px">Unit</th>
+            <th>State</th>
+            <th>Update</th>
+        </tr>
+    </thead>
+    <tbody class="order_list_searched" style="background-color: whitesmoke; font-size:15px;">
+    {% for order in order_list %}
+        <tr id="order_searched_row{{ forloop.counter }}">
+            <td style="display: none">{{ order.id }}</td>
+            <td style="font-size:0.9vw;"><a href="{% url 'opman:mention_view' order.id %}">{{ order.order_id }}</a></td>
+            <td style="font-size:0.9vw;"><a href="{% url 'opman:mention_view' order.id %}">{{ order.seq_num }}</a></td>
+            <td style="font-size:0.6vw;">{{ order.customer_po }}</td>
+            <td style="font-size:0.6vw;">{{ order.customer }}</td>
+            <td style="font-size:0.8vw;">{{ order.order_type }}</td>
+            <td style="font-size:0.6vw;">{{ order.order_date|date:"m/d" }}</td>
+            <td style="font-size:0.6vw;">{{ order.rtd|date:"m/d" }}</td>
+            <td style="font-size:0.6vw;">{{ order.etd|date:"m/d" }}</td>
+            <td style="font-size:0.6vw;">{{ order.brand }}</td>
+            <td style="font-size:0.8vw;">{{ order.item }}</td>
+            <td style="font-size:0.8vw;">{{ order.color_code }}</td>
+            <td style="font-size:0.8vw;">{{ order.pattern }}</td>
+            <td style="font-size:0.8vw;">{{ order.order_qty }}</td>
+            <td style="font-size:0.6vw;">{{ order.unit }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+    <div class="row">
+        <div class="row"><h1> </h1></div>
+        <div class="row"><h1 style="text-align: center">Oops!</h1> <h5 style="text-align: center">We can't seem to find the order</h5> <h5 style="text-align: center">you're looking for.</h5></div>
+    </div>
+{% endif %}
+<script>
+$(function() {
+    str = "";
+    idStr = "";
+    idArr = new Array();	// 배열 선언
+
+    // 검색 된 오더 테이블의 Row 클릭시 값 가져오기
+    $(".order_list_searched tr").click(function(){
+
+        // 현재 클릭된 Row(<tr>)
+        var tr = $(this);
+        var td = tr.children();
+
+        // tr.text()는 클릭된 Row 즉 tr에 있는 모든 값을 가져온다.
+        // console.log("클릭한 Row의 모든 데이터 : "+tr.text());
+
+        // 반복문을 이용해서 배열에 값을 담아 사용할 수 도 있다.
+        //td.each(function(i){
+        //    tdArr.push(td.eq(i).text());
+        //});
+
+        //console.log("배열에 담긴 값 : "+tdArr);
+
+        // td.eq(index)를 통해 값을 가져올 수도 있다.
+        _id = td.eq(0).text();
+        //str +=	" id : " + _id;
+
+        // $("#ex1_Result1").html(" * 클릭한 Row의 모든 데이터 = " + tr.text());
+        //$("#selected").html(str);
+
+        // 선택 행 하이라이트
+        $(this).toggleClass('highlight');
+
+        // 선택 시 _id 추가/삭제 토글
+        if(idArr.includes(_id)) {
+            // _id 삭제
+            for(let i = 0; i < idArr.length; i++) {
+              if(idArr[i] === _id)  {
+                idArr.splice(i, 1);
+                i--;
+              }
+            }
+        } else {
+            // _id 추가
+            idArr.push(_id);
+        };
+
+        // idArr 문자열화
+        for (var i = 0; i < idArr.length; i++) {
+            str = str + idArr[i]+"$";
+        };
+
+        idStr = str;
+        str = "";
+    });
+
+    // jQuerry contextMenu
+    $.contextMenu({
+        selector: '.order_list_searched',
+        callback: function(key, options) {
+            var m = "clicked: " + key;
+            //window.console && console.log(m) || alert(m);
+        },
+        items: {
+            "selectall": {
+                name: "Select All",
+                icon: "edit",
+                callback: function (){
+                    var totalRowCount = 0;
+                    var rowCount = 0;
+                    var table = document.getElementById("table-order-list");
+                    var rows = table.getElementsByTagName("tr")
+                    for (var i = 0; i < rows.length; i++) {
+                        totalRowCount++;
+                        if (rows[i].getElementsByTagName("td").length > 0) {
+                            rowCount++;
+                        }
+                    }
+                    for (var row_num = 1; row_num < rowCount + 1; row_num++){
+                        var rowObj = document.getElementById("order_searched_row"+row_num);
+                        var rowOrderId = $(rowObj).children().eq(0).text();
+                        if (idArr.includes(rowOrderId)) {
+
+                        } else {
+                            idArr.push(rowOrderId);
+                        }
+                        rowObj.className = 'highlight';
+                    }
+                    for (var i = 0; i < idArr.length; i++) {
+                        str = str + idArr[i]+"$";
+                    };
+                    idStr = str;
+                    str = "";
+                },
+                accesskey: "s"
+            },
+            "unselectall": {
+                name: "Unselect All",
+                icon: "edit",
+                callback: function (){
+                    location.reload();
+                },
+                accesskey: "u"
+            },
+            "sep1": "---------",
+            "addwatchlist": {
+                name: "Add to Watchlist",
+                icon: "add",
+                callback: function() {
+                    var url = "{% url 'opman:add_watch_user' 'a' %}";
+                    window.location.href = url +idStr;
+                },
+                accesskey: "a"
+            },
+            "like": {name: "Like", icon: "edit"},
+            "mention": {name: "Mention", icon: "edit"},
+            "sep2": "---------",
+            "edit": {name: "Edit", icon: "edit"},
+           copy: {name: "Copy", icon: "copy"},
+            "delete": {
+                name: "Delete",
+                icon: "delete",
+                callback: function (){
+                    var url = "{% url 'opman:del_watch_user' 'd' %}";
+                    window.location.href = url +idStr;
+                },
+                accesskey: "d"
+            },
+            "sep3": "---------",
+            "toclaim": {name: "To Claim", icon: "edit"},
+            "sep4": "---------",
+            "share": {name: "Share by",
+                items: {
+                        "email": { name: "Email"},
+                        "zalo": { name: "Zalo"},
+                        "kakaotalk": { name: "Kakaotalk" },
+                    }},
+            "sep5": "---------",
+            "download": {name: "Download", icon: "edit"},
+        }
+    });
+});
+</script>

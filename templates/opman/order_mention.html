@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load opman_filter %}
+{% block content %}
+<div class="container my-3">
+    <!-- 사용자오류 표시 -->
+    {% if messages %}
+    <div class="alert alert-danger my-3" role="alert">
+    {% for message in messages %}
+        <strong>{{ message.tags }}</strong>
+        <ul><li>{{ message.message }}</li></ul>
+    {% endfor %}
+    </div>
+    {% endif %}
+    <h3 class="border-bottom py-2">[{{ order.order_id }}-{{ order.seq_num }}] {{ order.customer }}, {{ order.order_type }}</h3>
+    <h2>{{ order.item }} ({{ order.color_code }}, {{ order.pattern }}) : {{ order.order_qty }}M</h2>
+    <div class="row my-3">
+        <div class="col-1"> <!-- 추천영역 -->
+            <div class="bg-light text-center p-3 border font-weight-bolder mb-1">0</div>
+            <a href="#"
+               class="recommend btn btn-sm btn-secondary btn-block my-1">Like</a>
+        </div>
+        <div class="col-11"> <!-- 오더 정보 영역 -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="card-text">Order Process</div>
+                    <div class="d-flex justify-content-end">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h5 class="border-bottom my-3 py-2">MENTION : {{order.mention_set.count}}</h5>
+    {% for mention in order.mention_set.all %}
+    <a name="mention_{{ mention.id }}"></a>
+    <div class="row my-3">
+        <div class="col-1">  <!-- 추천영역 -->
+            <div class="bg-light text-center p-3 border font-weight-bolder mb-1">0</div>
+            <a href="#"
+                class="recommend btn btn-sm btn-secondary btn-block my-1">Like</a>
+        </div>
+        <div class="col-11">  <!-- 답변영역 -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="card-text">{{ mention.content|mark }}</div>
+                    <div class="d-flex justify-content-end">
+                        {% if mention.modify_date %}
+                        <div class="badge badge-light p-2 text-left mx-3">
+                            <div class="mb-2">modified at</div>
+                            <div>{{ mention.modify_date }}</div>
+                        </div>
+                        {% endif %}
+                        <div class="badge badge-light p-2 text-left">
+                            <div class="mb-2">{{ mention.author.username }}</div>
+                            <div>{{ mention.create_date }}</div>
+                        </div>
+                    </div>
+                    {% if request.user == mention.author %}
+                    <div class="my-3">
+                        <a href="{% url 'opman:mention_modify' mention.id  %}"
+                           class="btn btn-sm btn-outline-secondary">Modify</a>
+                        <a href="#" class="delete btn btn-sm btn-outline-secondary "
+                           data-uri="{% url 'opman:mention_delete' mention.id  %}">Delete</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    <form action="{% url 'opman:mention_create' order.id %}" method="post" class="my-3">
+        {% csrf_token %}
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">
+        {% for field in form %}
+            {% if field.errors %}
+            <strong>{{ field.label }}</strong>
+            {{ field.errors }}
+            {% endif %}
+        {% endfor %}
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <textarea {% if not user.is_authenticated %}disabled{% endif %}
+              name="content" id="content" class="form-control" rows="10"></textarea>
+        </div>
+        <input type="submit" value="Mention" class="btn btn-primary">
+    </form>
+</div>
+{% endblock %}
+{% block script %}
+<script type='text/javascript'>
+$(document).ready(function(){
+    $(".delete").on('click', function() {
+        if(confirm("삭제하시겠습니까?")) {
+            location.href = $(this).data('uri');
+        }
+    });
+    $(".recommend").on('click', function() {
+        if(confirm("추천하시겠습니까?")) {
+            location.href = $(this).data('uri');
+        }
+    });
+});
+</script>
+{% endblock %}

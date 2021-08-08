@@ -1,0 +1,28 @@
+.comment {
+    border-top: dotted 1px #ddd;
+    font-size: 0.7em;
+}
+
+#table-order-list {
+    overflow-x: scroll;
+    overflow-y: hidden;
+    white-space: nowrap;
+}
+
+.form-control, .form-select {
+    font-size:13px;
+}
+
+
+.table-order-list th {
+    background-color: #2E4053;
+    color : whitesmoke;
+}
+
+.page404 {
+    font-size: 5.0em;
+}
+
+.highlight {
+    background-color: #bbdefb;
+    }
