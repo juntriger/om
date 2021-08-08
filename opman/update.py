@@ -49,7 +49,7 @@ def divide_colorcode(color):
     return color_code
 
 def update_by_pending_list():
-    file_name = 'C:/Users/juntr/OneDrive/Python Scripts/om/opman/reports/PENDING ORDER.xlsx'
+    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/PENDING ORDER.xlsx'
     wb = openpyxl.load_workbook(file_name)
     # ws = wb.get_active_sheet()
     ws = wb.get_sheet_by_name("Sheet1")
@@ -93,7 +93,7 @@ def update_by_pending_list():
         o.save()
 
 def update_new_order():
-    file_name = 'C:/Users/juntr/OneDrive/Python Scripts/om/opman/reports/BSVRECIPT.xlsx'
+    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/BSVRECIPT.xlsx'
     wb = openpyxl.load_workbook(file_name)
     # ws = wb.get_active_sheet()
     ws = wb.get_sheet_by_name("total received today")
@@ -214,7 +214,7 @@ def update_new_order():
             pass
 
 def update_customer_list():
-    file_name = 'C:/Users/juntr/OneDrive/Python Scripts/om/opman/reports/customer_list.xlsx'
+    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/customer_list.xlsx'
     wb = openpyxl.load_workbook(file_name)
     ws = wb.get_sheet_by_name("customer_list")
     last_row = ws.max_row
@@ -658,7 +658,7 @@ def qset_to_dict(qset):
 
 def update_by_orderprocess():
 
-    file_name = 'C:/Users/juntr/OneDrive/Python Scripts/om/opman/reports/orderprocess.xlsx'
+    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/orderprocess.xlsx'
 
     # 오더 프로세스 딕셔너리화
     opsdict = opfile_to_dict(file_name)
