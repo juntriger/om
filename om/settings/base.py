@@ -10,9 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 # 환경 변수 : DJANGO_SETTINGS_MODULE==om.settings.base
-import os
-import json
+
 from pathlib import Path
+import os, json
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
