@@ -2,6 +2,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import render, redirect
 from ..models import Order
 from django.db.models import Q
+from .process_views import process_add
 
 def search_order(request):
     sql = Q(state='') | Q(state=1)
@@ -56,9 +57,10 @@ def search_order(request):
     order_list = Order.objects.order_by('-order_date')
     order_list = order_list.filter(sql).distinct()
 
-
     paginator = Paginator(order_list, 50)
     page_obj = paginator.get_page(page)
+
+    page_obj = process_add(page_obj)
 
     context['order_list'] = page_obj
 
@@ -84,6 +86,8 @@ def search_order_by_str(request):
     # 조회
     order_list = Order.objects.order_by('-order_date')
     order_list = order_list.filter(sql).distinct()
+
+    order_list = process_add(order_list)
 
     context['order_list'] = order_list
 

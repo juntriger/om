@@ -1,6 +1,7 @@
 from django.core.paginator import Paginator
 from django.shortcuts import render
 from ..models import Order, Customer
+from .process_views import process_add
 
 def index(request):
     """
@@ -16,6 +17,8 @@ def index(request):
     # 페이지 처리
     paginator = Paginator(order_list, 50)
     page_obj = paginator.get_page(page)
+
+    page_obj = process_add(page_obj)
 
     context = {'order_list': page_obj, 'customer_list': customer_list, 'page': page}
 
@@ -34,6 +37,8 @@ def order_process(request):
     # 페이지 처리
     paginator = Paginator(order_list, 50)
     page_obj = paginator.get_page(page)
+
+    page_obj = process_add(page_obj)
 
     context = {'order_list': page_obj, 'page': page}
 

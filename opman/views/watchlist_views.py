@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from ..models import Order
 from django.db.models import Q
+from .process_views import process_add
 
 def watchlist(request):
     page = request.GET.get('page', '1')
@@ -16,6 +17,8 @@ def watchlist(request):
 
     paginator = Paginator(order_list, 50)
     page_obj = paginator.get_page(page)
+
+    page_obj = process_add(page_obj)
 
     context = {'order_list': page_obj, 'page': page}
 

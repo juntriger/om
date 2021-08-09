@@ -40,9 +40,10 @@
             <td style="font-size:0.8vw;">{{ order.pattern }}</td>
             <td style="font-size:0.8vw;">{{ order.order_qty }}</td>
             <td style="font-size:0.6vw;">{{ order.unit }}</td>
+            <td style="font-size:0.6vw;">{{ order.last_state|default_if_none:'' }}</td>
+            <td style="font-size:0.6vw;">{{ order.last_update|date:"m/d" }}</td>
         </tr>
     {% endfor %}
-    </tbody>
 </table>
 {% else %}
     <div class="row">
