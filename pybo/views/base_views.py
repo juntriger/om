@@ -3,7 +3,7 @@ from django.shortcuts import render, get_object_or_404
 from django.db.models import Q, Count
 
 from ..models import Question
-
+import logging
 
 def index(request):
     """
