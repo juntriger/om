@@ -57,10 +57,10 @@ def search_order(request):
     order_list = Order.objects.order_by('-order_date')
     order_list = order_list.filter(sql).distinct()
 
-    #paginator = Paginator(order_list, 50)
-    #page_obj = paginator.get_page(page)
+    paginator = Paginator(order_list, 50)
+    page_obj = paginator.get_page(page)
 
-    page_obj = process_add(order_list)
+    page_obj = process_add(page_obj)
 
     context['order_list'] = page_obj
 
