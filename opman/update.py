@@ -522,7 +522,12 @@ def opfile_to_dict(file_name):
             ws[f'AF{row}'].value,
         ]
         order_key = ws[f'A{row}'].value + '-' + str(ws[f'B{row}'].value)
-        pdict = {**{'process_qty': ws[f'O{row}'].value}, **arrange_process(process_lst)}
+        prcs_id = str(ws[f'A{row}'].value) + \
+                  '0'*(3-len(str(ws[f'B{row}'].value))) + \
+                  str(ws[f'B{row}'].value) + \
+                  '0'*(5-len(str(ws[f'O{row}'].value))) + str(ws[f'O{row}'].value) + '00'
+
+        pdict = {**{'process_id':prcs_id}, **{'process_qty': ws[f'O{row}'].value}, **arrange_process(process_lst)}
 
         if order_key in opsdict:
             process_num = len(opsdict[order_key])
@@ -550,36 +555,52 @@ def compare_process_dict(dic_a, dic_b):
     prsc = {}
     # 두 딕셔너리 비교
     prcs_qty_a = []
-    for prcs_a in dic_a:
-        prcs_qty_a = prcs_qty_a.append(dic_a[prcs_a]['process_qty'])
 
+    for prcs_a in dic_a:
+        prcs_qty_a.append(dic_a[prcs_a]['process_qty'])
+
+    i = 0
     for prcs_a in dic_a:
         for prcs_b in dic_b:
 
             # 진행 수량이 동일한 프로세스라면
             if dic_a[prcs_a]['process_qty'] == dic_b[prcs_b]['process_qty']:
-
                 # 최초 업데이트 일자가 같다면
-                if dic_a[prcs_a]['first_update'] == dic_b[prcs_b]['first_update']:
-                    prsc = {**prsc, **dic_b[prcs_b]}
+                if str(dic_a[prcs_a]['first_update']) == dic_b[prcs_b]['first_update']:
+                    prsc = {**prsc, **{i:dic_b[prcs_b]}}
+                    prsc[i]['process_id'] = dic_a[prcs_a]['process_id']
+                    i = i + 1
 
                 # 최초 업데이트 일자가 다른 수량만 같은 프로세스라면
                 else:
-
                     # 기존 프로세스가 최초 업데이트 일자가 없었던 것이라면
                     if dic_a[prcs_a]['first_update'] == None:
-                        prsc = {**prsc, **dic_b[prcs_b]}
+                        prsc = {**prsc, **{i: dic_b[prcs_b]}}
+                        prsc[i]['process_id'] = dic_a[prcs_a]['process_id']
+                        i = i + 1
 
                     # 수량만 같은 추가 프로세스
                     else:
-                        prsc = {**prsc, **dic_a[prcs_a], **dic_b[prcs_b]}
+                        dic_b[prcs_b]['process_id'] = dic_a[prcs_a]['process_id'][:-2] + \
+                                                      '0'*(2-len(str(int(dic_a[prcs_a]['process_id'][-2:]) + 1))) + \
+                                                      str(int(dic_a[prcs_a]['process_id'][-2:]) + 1)
+
+                        prsc = {**prsc, **{i:dic_a[prcs_a]}, **{i+1:dic_b[prcs_b]}}
+                        i = i + 2
 
             # 진행 수량이 다른, 추가 진행 프로세스라면
             else:
                 if dic_b[prcs_b]['process_qty'] in prcs_qty_a:
                     pass
+                elif str(dic_a[prcs_a]['first_update']) == dic_b[prcs_b]['first_update']:
+                    prsc = {**prsc, **{i:dic_b[prcs_b]}}
+                    Process.objects.get(pk=dic_a[prcs_a]['process_id']).delete()
+
                 else:
-                    prsc = {**prsc, **dic_a[prcs_a], **dic_b[prcs_b]}
+                    dic_b[prcs_b]['process_id'] = dic_a[prcs_a]['process_id'][:-2] + \
+                                                  '0' * (2 - len(str(int(dic_a[prcs_a]['process_id'][-2:]) + 1))) + \
+                                                  str(int(dic_a[prcs_a]['process_id'][-2:]) + 1)
+                    prsc = {**prsc, **{i:dic_a[prcs_a]}, **{i+1:dic_b[prcs_b]}}
     
     return prsc
 
@@ -589,6 +610,7 @@ def qset_to_dict(qset):
     for q in qset:
         process = {
             i:{
+                'process_id':q.id,
                 'procedure': q.procedure,
                 'process_qty': q.process_qty,
                 'first_update': q.first_update,
@@ -662,7 +684,6 @@ def update_by_orderprocess():
 
     # 오더 프로세스 딕셔너리화
     opsdict = opfile_to_dict(file_name)
-
     order_list = Order.objects.filter(state=None)
 
     # Order 모델의 order 가 주체가 되어 opsdict 검색
@@ -680,40 +701,83 @@ def update_by_orderprocess():
 
             # 딕셔너리 포함된 모든 프로세스 업데이트
             for prsc in prsc_dict:
-                p = Process(
-                    order=order,
-                    process_qty=prsc_dict[prsc]['process_qty'],
-                    procedure=prsc_dict[prsc]['procedure'],  # Production Procedure
-                    first_update=prsc_dict[prsc]['first_update'],
-                    last_state=None,  # Status
-                    last_update=prsc_dict[prsc]['last_update'],  # Update Date
-                    plan_state=prsc_dict[prsc]['plan']['state'],
-                    plan_date=prsc_dict[prsc]['plan']['date'],  # Plan Date
-                    plan_qty = None,  # Plan Q'ty
-                    state_last=prsc_dict[prsc]['last']['state'],
-                    date_last=prsc_dict[prsc]['last']['date'],
-                    pd_state=prsc_dict[prsc]['pd']['state'],
-                    pd_date=prsc_dict[prsc]['pd']['date'],  # Production Date
-                    pd_qty=prsc_dict[prsc]['pd']['qty'],  # Production Q'ty
-                    bf_state=prsc_dict[prsc]['bf']['state'],
-                    bf_date=prsc_dict[prsc]['bf']['date'],  # Buffing Date
-                    bf_qty=prsc_dict[prsc]['bf']['qty'],  # Buffing Q'ty
-                    eb_state=prsc_dict[prsc]['eb']['state'],
-                    eb_date=prsc_dict[prsc]['eb']['date'],  # Embo Date
-                    eb_qty=prsc_dict[prsc]['eb']['qty'],  # Embo Q'ty
-                    pt_state=prsc_dict[prsc]['pt']['state'],
-                    pt_date=prsc_dict[prsc]['pt']['date'],  # Color Print Date
-                    pt_qty=prsc_dict[prsc]['pt']['qty'],  # Color Print Q'ty
-                    ins_state=prsc_dict[prsc]['ins']['state'],
-                    ins_date=prsc_dict[prsc]['ins']['date'],  # Inspection Date
-                    ins_qty=prsc_dict[prsc]['ins']['qty'],  # Inspection Q'ty
-                    shp_date=prsc_dict[prsc]['shp']['date'],  # Shipment Date
-                    shp_qty=prsc_dict[prsc]['shp']['qty']
-                )
+                p = Process()
+                p.id = prsc_dict[prsc]['process_id']
+                p.order = order
+                p.process_qty = prsc_dict[prsc]['process_qty']
+                p.procedure = prsc_dict[prsc]['procedure']  # Production Procedure
+                p.first_update = prsc_dict[prsc]['first_update']
+                p.last_state = None  # Status
+                p.last_update = prsc_dict[prsc]['last_update']  # Update Date
+                p.plan_state = prsc_dict[prsc]['plan']['state']
+                p.plan_date = prsc_dict[prsc]['plan']['date']  # Plan Date
+                p.plan_qty = None  # Plan Q'ty
+                p.state_last = prsc_dict[prsc]['last']['state']
+                p.date_last = prsc_dict[prsc]['last']['date']
+                p.pd_state = prsc_dict[prsc]['pd']['state']
+                p.pd_date = prsc_dict[prsc]['pd']['date']  # Production Date
+                p.pd_qty = prsc_dict[prsc]['pd']['qty']  # Production Q'ty
+                p.bf_state = prsc_dict[prsc]['bf']['state']
+                p.bf_date = prsc_dict[prsc]['bf']['date']  # Buffing Date
+                p.bf_qty = prsc_dict[prsc]['bf']['qty']  # Buffing Q'ty
+                p.eb_state = prsc_dict[prsc]['eb']['state']
+                p.eb_date = prsc_dict[prsc]['eb']['date']  # Embo Date
+                p.eb_qty = prsc_dict[prsc]['eb']['qty']  # Embo Q'ty
+                p.pt_state = prsc_dict[prsc]['pt']['state']
+                p.pt_date = prsc_dict[prsc]['pt']['date']  # Color Print Date
+                p.pt_qty = prsc_dict[prsc]['pt']['qty'] # Color Print Q'ty
+                p.ins_state = prsc_dict[prsc]['ins']['state']
+                p.ins_date = prsc_dict[prsc]['ins']['date']  # Inspection Date
+                p.ins_qty = prsc_dict[prsc]['ins']['qty']  # Inspection Q'ty
+                p.shp_date = prsc_dict[prsc]['shp']['date']  # Shipment Date
+                p.shp_qty = prsc_dict[prsc]['shp']['qty']
                 p.save()
         except:
             pass
+    #p = Process()
+    #p.id = 'SOV02452840550001000'
+    #p.order = Order.objects.get(pk=4)
+    #p.shp_qty = 10
+    #p.save()
 
+    """
+    p = Process(
+        id = prsc_dict[prsc]['process_id'],
+        order=Order.objects.get(pk=order),
+        process_qty=prsc_dict[prsc]['process_qty'],
+        procedure=prsc_dict[prsc]['procedure'],  # Production Procedure
+        first_update=prsc_dict[prsc]['first_update'],
+        last_state=None,  # Status
+        last_update=prsc_dict[prsc]['last_update'],  # Update Date
+        plan_state=prsc_dict[prsc]['plan']['state'],
+        plan_date=prsc_dict[prsc]['plan']['date'],  # Plan Date
+        plan_qty = None,  # Plan Q'ty
+        state_last=prsc_dict[prsc]['last']['state'],
+        date_last=prsc_dict[prsc]['last']['date'],
+        pd_state=prsc_dict[prsc]['pd']['state'],
+        pd_date=prsc_dict[prsc]['pd']['date'],  # Production Date
+        pd_qty=prsc_dict[prsc]['pd']['qty'],  # Production Q'ty
+        bf_state=prsc_dict[prsc]['bf']['state'],
+        bf_date=prsc_dict[prsc]['bf']['date'],  # Buffing Date
+        bf_qty=prsc_dict[prsc]['bf']['qty'],  # Buffing Q'ty
+        eb_state=prsc_dict[prsc]['eb']['state'],
+        eb_date=prsc_dict[prsc]['eb']['date'],  # Embo Date
+        eb_qty=prsc_dict[prsc]['eb']['qty'],  # Embo Q'ty
+        pt_state=prsc_dict[prsc]['pt']['state'],
+        pt_date=prsc_dict[prsc]['pt']['date'],  # Color Print Date
+        pt_qty=prsc_dict[prsc]['pt']['qty'],  # Color Print Q'ty
+        ins_state=prsc_dict[prsc]['ins']['state'],
+        ins_date=prsc_dict[prsc]['ins']['date'],  # Inspection Date
+        ins_qty=prsc_dict[prsc]['ins']['qty'],  # Inspection Q'ty
+        shp_date=prsc_dict[prsc]['shp']['date'],  # Shipment Date
+        shp_qty=prsc_dict[prsc]['shp']['qty']
+    )
+    p.id = 'SOV02452840550001000'
+    p.order = Order.objects.get(pk=4)
+    p.shp_qty = 10
+    p.save()
+
+    """
 
     """
     # row에 해당되는 오더가 이미 있다면

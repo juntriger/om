@@ -40,6 +40,7 @@ class WatchlistInfo(models.Model):
 class Process(models.Model):
 
     # Order 속성
+    id = models.CharField(max_length=20, primary_key=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     process_qty = models.IntegerField(default=0)
     procedure = models.CharField(max_length=10, null=True, blank=True)      # Production Procedure
