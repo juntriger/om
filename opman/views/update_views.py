@@ -1,9 +1,14 @@
+import os
+
+from django.shortcuts import render
 from opman.models import Order, Process, Customer
 from django.utils import timezone
+from django.core.files.storage import FileSystemStorage
+from django.core.files.uploadedfile import TemporaryUploadedFile
+
+
 import openpyxl
 from tqdm import trange, tqdm
-from django.shortcuts import get_object_or_404
-import csv
 
 def divide_colorcode(color):
     color_code_list = color.split(' ')
@@ -49,7 +54,7 @@ def divide_colorcode(color):
     return color_code
 
 def update_by_pending_list():
-    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/PENDING ORDER.xlsx'
+    file_name = '/opman/reports/PENDING ORDER.xlsx'
     wb = openpyxl.load_workbook(file_name)
     # ws = wb.get_active_sheet()
     ws = wb.get_sheet_by_name("Sheet1")
@@ -93,7 +98,7 @@ def update_by_pending_list():
         o.save()
 
 def update_new_order():
-    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/BSVRECIPT.xlsx'
+    file_name = '/opman/reports/BSVRECIPT.xlsx'
     wb = openpyxl.load_workbook(file_name)
     # ws = wb.get_active_sheet()
     ws = wb.get_sheet_by_name("total received today")
@@ -214,7 +219,7 @@ def update_new_order():
             pass
 
 def update_customer_list():
-    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/customer_list.xlsx'
+    file_name = '/opman/reports/customer_list.xlsx'
     wb = openpyxl.load_workbook(file_name)
     ws = wb.get_sheet_by_name("customer_list")
     last_row = ws.max_row
@@ -571,13 +576,16 @@ def compare_process_dict(dic_a, dic_b):
                     prsc[i]['process_id'] = dic_a[prcs_a]['process_id']
                     i = i + 1
 
-                # 최초 업데이트 일자가 다른 수량만 같은 프로세스라면
+                # 최초 업데이트 일자가 다른 프로세스라면
                 else:
                     # 기존 프로세스가 최초 업데이트 일자가 없었던 것이라면
                     if dic_a[prcs_a]['first_update'] == None:
                         prsc = {**prsc, **{i: dic_b[prcs_b]}}
                         prsc[i]['process_id'] = dic_a[prcs_a]['process_id']
                         i = i + 1
+
+                    elif prcs_qty_a.count(dic_b[prcs_b]['process_qty']) > 1:
+                        pass
 
                     # 수량만 같은 추가 프로세스
                     else:
@@ -590,16 +598,23 @@ def compare_process_dict(dic_a, dic_b):
 
             # 진행 수량이 다른, 추가 진행 프로세스라면
             else:
+                # 순서만 다를 뿐 이미 있는 프로세스로 추정
                 if dic_b[prcs_b]['process_qty'] in prcs_qty_a:
                     pass
+
+                # 동일 프로세스이며 업데이트로 인해 수량이 달라진 경우
                 elif str(dic_a[prcs_a]['first_update']) == dic_b[prcs_b]['first_update']:
                     prsc = {**prsc, **{i:dic_b[prcs_b]}}
                     Process.objects.get(pk=dic_a[prcs_a]['process_id']).delete()
 
+
                 else:
-                    dic_b[prcs_b]['process_id'] = dic_a[prcs_a]['process_id'][:-2] + \
+                    dic_b[prcs_b]['process_id'] = dic_a[prcs_a]['process_id'][:13] + \
+                                                  '0' * (5 - len(str(int(dic_b[prcs_b]['process_qty'])))) + \
+                                                  str(int(dic_b[prcs_b]['process_qty'])) + \
                                                   '0' * (2 - len(str(int(dic_a[prcs_a]['process_id'][-2:]) + 1))) + \
                                                   str(int(dic_a[prcs_a]['process_id'][-2:]) + 1)
+
                     prsc = {**prsc, **{i:dic_a[prcs_a]}, **{i+1:dic_b[prcs_b]}}
     
     return prsc
@@ -678,12 +693,10 @@ def qset_to_dict(qset):
 
     return dict
 
-def update_by_orderprocess():
-
-    file_name = 'C:/Users/juntr/PycharmProjects/om/opman/reports/orderprocess.xlsx'
+def update_by_orderprocess(file):
 
     # 오더 프로세스 딕셔너리화
-    opsdict = opfile_to_dict(file_name)
+    opsdict = opfile_to_dict(file)
     order_list = Order.objects.filter(state=None)
 
     # Order 모델의 order 가 주체가 되어 opsdict 검색
@@ -802,3 +815,24 @@ def update_by_orderprocess():
         
     """
     return
+
+def file_upload(request):
+
+    if request.method == 'POST' and request.FILES['file']:
+        title = request.POST['title']
+        file = TemporaryUploadedFile.temporary_file_path(request.FILES['file'])
+        if title == '--SELECT--':
+            pass
+        else:
+            if title == 'Dry Line Plan':
+                pass
+            elif title == 'Dry Line Report':
+                pass
+            elif title == 'Order Process File':
+                update_by_orderprocess(file)
+                pass
+            else:
+                pass
+    else:
+        pass
+    return render(request, 'opman/file_upload.html')

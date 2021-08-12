@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Form</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'bootstrap.min.css' %}">
+    <!-- opman CSS -->
+    <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+    <style>
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body style="background-color:whitesmoke">
+<nav class="navbar navbar-expand-lg navbar-light border-bottom" style="background-color: #2E4053">
+    <a class="navbar-brand mx-3" style="color: navajowhite">File UPLOAD</a>
+</nav>
+<div class="mb-3">
+    <form method="post" class="post-form" action="{% url 'opman:file_upload' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <select class="title form-select" style="width: 100%; height: 50%;" name="title">
+            <option selected>--SELECT--</option>
+            <option>Dry Line Plan</option>
+            <option>Dry Line Report</option>
+            <option>Wet Line Plan</option>
+            <option>Wet Line Report</option>
+            <option>Inspection Report</option>
+            <option>Order Process File</option>
+        </select>
+        <input class="title form-control" type="file" name="file">
+        <button type="submit" class="file-upload btn btn-primary">Upload</button>
+    </form>
+</div>
+</body>

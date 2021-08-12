@@ -14,6 +14,7 @@ urlpatterns = [
     path('searchbystr/', views.search_views.search_order_by_str, name='search_order_by_str'),
 
     path('export_order_xlsx/', views.export_order_xlsx, name='export_order_xlsx'),
+    path('fileupload/', views.update_views.file_upload, name='file_upload'),
 
     path('watchlist/', views.watchlist_views.watchlist, name='watchlist'),
     path('watchlist/add/<str:_id_str>', views.watchlist_views.add_watch_user, name='add_watch_user'),

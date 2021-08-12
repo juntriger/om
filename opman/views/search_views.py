@@ -1,5 +1,5 @@
 from django.core.paginator import Paginator
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from ..models import Order
 from django.db.models import Q
 from .process_views import process_add

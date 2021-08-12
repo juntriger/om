@@ -61,6 +61,12 @@
                 <a class="nav-link active" aria-current="page"
                    href="#" style="color: navajowhite">Help</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link active" aria-current="page"
+                   href="{% url 'opman:file_upload' %}"
+                   onclick="window.open(this.href, '_blank', 'width=800, height=600'); return false;"
+                   style="color: navajowhite">Upload</a>
+            </li>
         </ul>
     </div>
     <div class="collapse navbar-collapse flex-grow-0" id="navbarNav">
