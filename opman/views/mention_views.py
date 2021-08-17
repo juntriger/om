@@ -3,12 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect, resolve_url
 from django.utils import timezone
 from ..forms import MentionForm
-from ..models import Order, Mention
+from ..models import Order, Process, Mention
 
 @login_required(login_url='common:login')
 def mention_view(request, order_id):
     order = get_object_or_404(Order, pk=order_id)
-    context = {'order': order}
+    prcs_list = Process.objects.filter(order=order)
+    context = {'order': order, 'prcs_list':prcs_list}
 
     return render(request, 'opman/order_mention.html', context)
 

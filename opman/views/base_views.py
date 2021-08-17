@@ -18,7 +18,7 @@ def index(request):
     paginator = Paginator(order_list, 50)
     page_obj = paginator.get_page(page)
 
-    #page_obj = process_add(page_obj)
+    page_obj = process_add(page_obj)
 
     context = {'order_list': page_obj, 'customer_list': customer_list, 'page': page}
 

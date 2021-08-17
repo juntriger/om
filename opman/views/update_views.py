@@ -1,11 +1,10 @@
-import os
-
 from django.shortcuts import render
-from opman.models import Order, Process, Customer
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from opman.models import Order, Process, Customer, FileUpload
 from django.utils import timezone
-from django.core.files.storage import FileSystemStorage
 from django.core.files.uploadedfile import TemporaryUploadedFile
-
+import os
 
 import openpyxl
 from tqdm import trange, tqdm
@@ -53,8 +52,7 @@ def divide_colorcode(color):
 
     return color_code
 
-def update_by_pending_list():
-    file_name = '/opman/reports/PENDING ORDER.xlsx'
+def update_by_pending_list(file_name):
     wb = openpyxl.load_workbook(file_name)
     # ws = wb.get_active_sheet()
     ws = wb.get_sheet_by_name("Sheet1")
@@ -97,8 +95,7 @@ def update_by_pending_list():
         )
         o.save()
 
-def update_new_order():
-    file_name = '/opman/reports/BSVRECIPT.xlsx'
+def update_new_order(file_name):
     wb = openpyxl.load_workbook(file_name)
     # ws = wb.get_active_sheet()
     ws = wb.get_sheet_by_name("total received today")
@@ -291,6 +288,7 @@ def arrange_process(process_lst):
     process = {
         'procedure': procedure,
         'first_update': None,
+        'last_state' : None,
         'last_update': None,
         'last': {
             'prior': 8,
@@ -461,7 +459,7 @@ def arrange_process(process_lst):
         pass
 
     if type(shp_qty) == int:
-        process['shp']['state'] = "Shipped"
+        process['shp']['state'] = "C"
         process['shp']['date'] = shp_date[:10]
         process['shp']['qty'] = shp_qty
 
@@ -494,6 +492,25 @@ def arrange_process(process_lst):
                                       process['ins']['date'],
                                       process['shp']['date']
                                       ])))
+
+        if process['shp']['date'] == process['last_update']:
+            process['last_state'] = 'shp_'+ process['shp']['state']
+        elif process['ins']['date'] == process['last_update']:
+            process['last_state'] = 'ins_'+ process['ins']['state']
+        elif process['pt']['date'] == process['last_update']:
+            process['last_state'] = 'pt_'+ process['pt']['state']
+        elif process['eb']['date'] == process['last_update']:
+            process['last_state'] = 'eb_'+ process['eb']['state']
+        elif process['bf']['date'] == process['last_update']:
+            process['last_state'] = 'bf_'+ process['bf']['state']
+        elif process['pd']['date'] == process['last_update']:
+            process['last_state'] = 'pd_'+ process['pd']['state']
+        elif process['last']['date'] == process['last_update']:
+            process['last_state'] = process['last']['state']
+        else:
+            pass
+
+
 
     return process
 
@@ -714,125 +731,101 @@ def update_by_orderprocess(file):
 
             # 딕셔너리 포함된 모든 프로세스 업데이트
             for prsc in prsc_dict:
-                p = Process()
-                p.id = prsc_dict[prsc]['process_id']
-                p.order = order
-                p.process_qty = prsc_dict[prsc]['process_qty']
-                p.procedure = prsc_dict[prsc]['procedure']  # Production Procedure
-                p.first_update = prsc_dict[prsc]['first_update']
-                p.last_state = None  # Status
-                p.last_update = prsc_dict[prsc]['last_update']  # Update Date
-                p.plan_state = prsc_dict[prsc]['plan']['state']
-                p.plan_date = prsc_dict[prsc]['plan']['date']  # Plan Date
-                p.plan_qty = None  # Plan Q'ty
-                p.state_last = prsc_dict[prsc]['last']['state']
-                p.date_last = prsc_dict[prsc]['last']['date']
-                p.pd_state = prsc_dict[prsc]['pd']['state']
-                p.pd_date = prsc_dict[prsc]['pd']['date']  # Production Date
-                p.pd_qty = prsc_dict[prsc]['pd']['qty']  # Production Q'ty
-                p.bf_state = prsc_dict[prsc]['bf']['state']
-                p.bf_date = prsc_dict[prsc]['bf']['date']  # Buffing Date
-                p.bf_qty = prsc_dict[prsc]['bf']['qty']  # Buffing Q'ty
-                p.eb_state = prsc_dict[prsc]['eb']['state']
-                p.eb_date = prsc_dict[prsc]['eb']['date']  # Embo Date
-                p.eb_qty = prsc_dict[prsc]['eb']['qty']  # Embo Q'ty
-                p.pt_state = prsc_dict[prsc]['pt']['state']
-                p.pt_date = prsc_dict[prsc]['pt']['date']  # Color Print Date
-                p.pt_qty = prsc_dict[prsc]['pt']['qty'] # Color Print Q'ty
-                p.ins_state = prsc_dict[prsc]['ins']['state']
-                p.ins_date = prsc_dict[prsc]['ins']['date']  # Inspection Date
-                p.ins_qty = prsc_dict[prsc]['ins']['qty']  # Inspection Q'ty
-                p.shp_date = prsc_dict[prsc]['shp']['date']  # Shipment Date
-                p.shp_qty = prsc_dict[prsc]['shp']['qty']
+                p = Process(
+                    id=prsc_dict[prsc]['process_id'],
+                    order=order,
+                    process_qty=prsc_dict[prsc]['process_qty'],
+                    procedure=prsc_dict[prsc]['procedure'],  # Production Procedure
+                    first_update=prsc_dict[prsc]['first_update'],
+                    last_state=prsc_dict[prsc]['last_state'],  # Status
+                    last_update=prsc_dict[prsc]['last_update'],  # Update Date
+                    plan_state=prsc_dict[prsc]['plan']['state'],
+                    plan_date=prsc_dict[prsc]['plan']['date'],  # Plan Date
+                    plan_qty=None,  # Plan Q'ty
+                    state_last=prsc_dict[prsc]['last']['state'],
+                    date_last=prsc_dict[prsc]['last']['date'],
+                    pd_state=prsc_dict[prsc]['pd']['state'],
+                    pd_date=prsc_dict[prsc]['pd']['date'],  # Production Date
+                    pd_qty=prsc_dict[prsc]['pd']['qty'],  # Production Q'ty
+                    bf_state=prsc_dict[prsc]['bf']['state'],
+                    bf_date=prsc_dict[prsc]['bf']['date'],  # Buffing Date
+                    bf_qty=prsc_dict[prsc]['bf']['qty'],  # Buffing Q'ty
+                    eb_state=prsc_dict[prsc]['eb']['state'],
+                    eb_date=prsc_dict[prsc]['eb']['date'],  # Embo Date
+                    eb_qty=prsc_dict[prsc]['eb']['qty'],  # Embo Q'ty
+                    pt_state=prsc_dict[prsc]['pt']['state'],
+                    pt_date=prsc_dict[prsc]['pt']['date'],  # Color Print Date
+                    pt_qty=prsc_dict[prsc]['pt']['qty'],  # Color Print Q'ty
+                    ins_state=prsc_dict[prsc]['ins']['state'],
+                    ins_date=prsc_dict[prsc]['ins']['date'],  # Inspection Date
+                    ins_qty=prsc_dict[prsc]['ins']['qty'],  # Inspection Q'ty
+                    shp_date=prsc_dict[prsc]['shp']['date'],  # Shipment Date
+                    shp_qty=prsc_dict[prsc]['shp']['qty']
+                )
                 p.save()
         except:
             pass
-    #p = Process()
-    #p.id = 'SOV02452840550001000'
-    #p.order = Order.objects.get(pk=4)
-    #p.shp_qty = 10
-    #p.save()
 
-    """
-    p = Process(
-        id = prsc_dict[prsc]['process_id'],
-        order=Order.objects.get(pk=order),
-        process_qty=prsc_dict[prsc]['process_qty'],
-        procedure=prsc_dict[prsc]['procedure'],  # Production Procedure
-        first_update=prsc_dict[prsc]['first_update'],
-        last_state=None,  # Status
-        last_update=prsc_dict[prsc]['last_update'],  # Update Date
-        plan_state=prsc_dict[prsc]['plan']['state'],
-        plan_date=prsc_dict[prsc]['plan']['date'],  # Plan Date
-        plan_qty = None,  # Plan Q'ty
-        state_last=prsc_dict[prsc]['last']['state'],
-        date_last=prsc_dict[prsc]['last']['date'],
-        pd_state=prsc_dict[prsc]['pd']['state'],
-        pd_date=prsc_dict[prsc]['pd']['date'],  # Production Date
-        pd_qty=prsc_dict[prsc]['pd']['qty'],  # Production Q'ty
-        bf_state=prsc_dict[prsc]['bf']['state'],
-        bf_date=prsc_dict[prsc]['bf']['date'],  # Buffing Date
-        bf_qty=prsc_dict[prsc]['bf']['qty'],  # Buffing Q'ty
-        eb_state=prsc_dict[prsc]['eb']['state'],
-        eb_date=prsc_dict[prsc]['eb']['date'],  # Embo Date
-        eb_qty=prsc_dict[prsc]['eb']['qty'],  # Embo Q'ty
-        pt_state=prsc_dict[prsc]['pt']['state'],
-        pt_date=prsc_dict[prsc]['pt']['date'],  # Color Print Date
-        pt_qty=prsc_dict[prsc]['pt']['qty'],  # Color Print Q'ty
-        ins_state=prsc_dict[prsc]['ins']['state'],
-        ins_date=prsc_dict[prsc]['ins']['date'],  # Inspection Date
-        ins_qty=prsc_dict[prsc]['ins']['qty'],  # Inspection Q'ty
-        shp_date=prsc_dict[prsc]['shp']['date'],  # Shipment Date
-        shp_qty=prsc_dict[prsc]['shp']['qty']
-    )
-    p.id = 'SOV02452840550001000'
-    p.order = Order.objects.get(pk=4)
-    p.shp_qty = 10
-    p.save()
-
-    """
-
-    """
-    # row에 해당되는 오더가 이미 있다면
-    if order.id:
-
-        # 기존과 동일한 지 확인
-        process_old = Process.objects.get(pk=order.id)
-        if (
-                (process_old.process_qty == ws[f'O{row}'].value) and  # 진행 수량 동일
-                (process_old.state == state) and                    # 진행 상태 동일
-                (process_old.update == update)                      # 업데이트 날짜 동일
-        ):
-            pass
-        # 동일하지 않다면
-        else:
-            # 동일 프로세스 업데이트인지
-            # 추가 프로세스 진행 정보인지
-            pass
-
-    # 해당되는 오더가 없다면
-    else:
-        
-    """
     return
 
+@login_required(login_url='common:login')
 def file_upload(request):
+    if request.method == 'POST':
+        file = request.FILES['file'].read()
+        fileName= request.POST['filename']
+        existingPath = request.POST['existingPath']
+        end = request.POST['end']
+        nextSlice = request.POST['nextSlice']
 
-    if request.method == 'POST' and request.FILES['file']:
-        title = request.POST['title']
-        file = TemporaryUploadedFile.temporary_file_path(request.FILES['file'])
-        if title == '--SELECT--':
-            pass
+        if file=="" or fileName=="" or existingPath=="" or end=="" or nextSlice=="":
+            res = JsonResponse({'data':'Invalid Request'})
+            return res
         else:
-            if title == 'Dry Line Plan':
-                pass
-            elif title == 'Dry Line Report':
-                pass
-            elif title == 'Order Process File':
-                update_by_orderprocess(file)
-                pass
+            if existingPath == 'null':
+                path = 'opman/upload/' + fileName
+                with open(path, 'wb+') as destination:
+                    destination.write(file)
+
+                if request.POST['filetype'] == 'Order Process':
+                    update_by_orderprocess(path)
+                elif request.POST['filetype'] == 'Pending List':
+                    update_by_pending_list(path)
+                elif request.POST['filetype'] == 'New Order':
+                    update_new_order(path)
+                else:
+                    pass
+
+                FileFolder = FileUpload()
+                FileFolder.file_name = fileName
+                FileFolder.upload_date = timezone.now()
+                FileFolder.save()
+
+                if int(end):
+                    res = JsonResponse({'data':'Uploaded Successfully','existingPath': fileName})
+                else:
+                    res = JsonResponse({'existingPath': fileName})
+                os.remove(path)
+                return res
+
             else:
-                pass
-    else:
-        pass
+                path = 'opman/upload/' + existingPath
+                model_id = FileUpload.objects.get(existingPath=existingPath)
+                if model_id.name == fileName:
+                    if not model_id.eof:
+                        with open(path, 'ab+') as destination:
+                            destination.write(file)
+                        if int(end):
+                            model_id.eof = int(end)
+                            model_id.save()
+                            res = JsonResponse({'data':'Uploaded Successfully','existingPath':model_id.existingPath})
+                        else:
+                            res = JsonResponse({'existingPath':model_id.existingPath})
+                        return res
+                    else:
+                        res = JsonResponse({'data':'EOF found. Invalid request'})
+                        return res
+                else:
+                    res = JsonResponse({'data':'No such file exists in the existingPath'})
+                    return res
+
     return render(request, 'opman/file_upload.html')

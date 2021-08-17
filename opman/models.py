@@ -85,9 +85,8 @@ class Customer(models.Model):
     customer = models.CharField(max_length=30)
 
 class FileUpload(models.Model):
-    title = models.CharField(max_length=50, null=True)
-    file_dir = models.TextField()
-    file_name = models.TextField()
+    title = models.CharField(max_length=50, null=True, blank=True)
+    file = models.TextField()
     upload_date = models.DateTimeField(null=True, blank=True)
     remark = models.TextField(null=True, blank=True)
 
